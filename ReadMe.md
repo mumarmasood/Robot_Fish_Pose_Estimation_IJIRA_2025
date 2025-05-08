@@ -66,8 +66,7 @@ The robotic fish tracking and testing system is structured as follows to ensure 
   - Parameter adjustment functions such as `increase_tu()`, `decrease_tu()`, `increase_speed()`, `decrease_speed()`, `increase_angle()`, and `decrease_angle()` allow for dynamic control of the robotic fish's movement parameters.
   - `on_closing()`: Ensures proper shutdown of the application, including releasing hardware resources and saving data.
 
-<<<<<<< HEAD
-=======
+
 ### Directory Structure
 
 The project is organized into the following directory structure for clarity and ease of access:
