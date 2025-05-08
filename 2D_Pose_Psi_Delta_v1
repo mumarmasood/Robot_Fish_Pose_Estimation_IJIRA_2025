@@ -1,0 +1,202 @@
+# Program to plot speed and orientation data from a 2D pose file in csv format
+
+import csv
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.signal
+
+# define the file name and path
+file_name = '2D_Pose_Data_20240319_155654_angle_10.0_speed_100.0.csv'
+file_path = 'Data/' + file_name
+# TRY THESE FILES
+#'Data/2D_Pose_Data_20240319_155306_angle_-20.0_speed_90.0.csv'
+#'Data/2D_Pose_Data_20240319_155416_angle_-20.0_speed_100.0.csv'
+
+
+# Open the file which has four columns: time, x, y, theta skip the 
+# first row which is the header
+
+time = []
+x = []
+y = []
+theta = []
+
+with open(file_path, 'r') as file:
+    reader = csv.reader(file)
+    next(reader) # skip the header
+    for row in reader:
+        time.append(float(row[0]))
+        x.append(float(row[1]))
+        y.append(float(row[2]))
+        theta.append(float(row[3]))
+
+# draw a line from the start of x, y in the starting direction
+# of the robot theta
+        
+
+# simulation of delta (input tail angle) and psi (heading angle)
+delta = np.radians(-10)
+
+
+
+# DEFINE SECOND ORDER SYSTEM PARAMETERS
+
+rho_w = 1025
+c_x = 0.39
+c_y = 2.2
+c_r = 0.0055
+
+# d_0 = 0.5
+# l_0 = 0.5
+# l_1 = 0.5
+# l_2 = 0.5
+# L = 1.5
+# d = 0.5
+a = 0.3
+b = 0.07
+
+# area of ellicpse = pi * a * b
+s_y = np.pi * a * b
+print("sy" + str(s_y))
+
+k_11 = 0.095
+k_22 = 0.83
+k_55 = 0.55
+
+k_F = 0.2
+
+F_xd_bar = 0.001
+v_avg = 0.005
+omega_avg = 0.01
+
+m = 2.4
+I_z = (4/15) * np.pi * rho_w * a * b**2 * (a**2 + b**2)
+print("I_z : " + str(I_z))
+m_1 = m - k_11*m
+m_3 = I_z - k_55*I_z
+
+
+N_delta = k_F*F_xd_bar
+N_r = c_r * omega_avg 
+Y_v = (1/2) * rho_w * v_avg**2 * s_y * c_y
+
+
+
+a_1 = N_delta/m_3
+a_2 = (Y_v*N_delta)/(m_1*m_3)
+a_3 = (m_3*Y_v + m_1*N_r)/(m_1*m_3)
+a_4 = (Y_v*N_r)/(m_1*m_3)
+
+# define the tf of the system
+
+num = [a_1, a_2] 
+den = [1, a_3, a_4]
+
+
+
+sys = scipy.signal.TransferFunction(num, den)
+
+print(sys)
+
+t = np.linspace(0, 10, 1000)
+
+t, yout = scipy.signal.step(sys, T = t)
+yout = yout * delta
+# integrate yout to get the heading angle psi
+psi = np.cumsum(yout)
+
+        
+        
+
+        
+x_ = x
+y_ = y
+        
+# smoothen the theta data
+theta_med_filt = scipy.signal.medfilt(theta, kernel_size=21)
+theta_med_avg_filt = np.convolve(theta_med_filt, np.ones(20)/20, mode='valid')
+
+# smoothen the x an y data
+# median filter
+x_med_filt = scipy.signal.medfilt(x, kernel_size=31)
+y_med_filt = scipy.signal.medfilt(y, kernel_size=31)
+# average filter
+x_med_avg_filt = np.convolve(x_med_filt, np.ones(30)/30, mode='valid')
+y_med_avg_filt = np.convolve(y_med_filt, np.ones(30)/30, mode='valid')
+
+
+x = x_med_avg_filt
+y = y_med_avg_filt
+
+
+
+# compress the y data so that the 10 meter becomes 5*(16/9) = 8.8889 meters
+x = [i * 0.889 for i in x]
+
+start_x = x[0]
+start_y = y[0]
+last_x = x[-1]
+# calculate the last y point in the direction of starting heading
+last_y = start_y + np.sin(np.radians(theta_med_avg_filt[0])) * (last_x - start_x)
+
+# Plot the x and y position
+plt.figure(1)
+plt.plot(x, y, color='blue', linewidth=2)
+# plot line between start and end point
+plt.plot([start_x, last_x], [start_y, last_y], color='red', linewidth=2)
+# plot original x and y
+
+plt.plot(x_, y_, color='green', linewidth=1)
+plt.legend(['Filtered', 'Heading', 'Original'])
+
+# change the font style to jsmath-cmsy10
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+plt.xlabel('X position (m)')
+plt.ylabel('Y position (m)')
+plt.title('2D Pose')
+plt.grid(True)
+# plt.show()
+
+# Plot the orientation
+plt.figure(2)
+plt.plot(time, theta, 'b')
+plt.xlabel('Time (s)')
+plt.ylabel('Orientation (rad)')
+plt.title('Orientation')
+plt.grid(True)
+plt.show()
+
+
+# Calculate the heading angle (degrees) based on x y position
+heading = []
+_diff_distance = 5
+for i in range(_diff_distance, len(x)):
+    dx = x[i] - x[i-_diff_distance]
+    dy = y[i] - y[i-_diff_distance]
+    angle_deg = np.degrees(np.arctan2(dy, dx))
+    heading.append(angle_deg)
+
+# # Smooth out the heading signal
+heading_smooth = scipy.signal.medfilt(heading, kernel_size=21)
+start_heading = heading_smooth[0]
+heading_smooth = heading_smooth - start_heading
+
+diff_heading = np.diff(heading_smooth)
+
+# Plot the heading angle
+plt.figure(4)
+plt.plot(time[1:len(heading_smooth)+1], heading_smooth, 'm')
+plt.plot(t, psi, 'r')
+plt.plot(time[1:len(diff_heading)+1], diff_heading, 'g')
+plt.xlabel('Time (s)')
+plt.ylabel('Heading (degrees)')
+plt.title('Heading')
+plt.grid(True)
+plt.show()
+
+
+
+def reject_outliers(data, m=2):
+    return data[abs(data - np.mean(data)) < m * np.std(data)]
+
