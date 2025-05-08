@@ -67,21 +67,9 @@ The robotic fish tracking and testing system is structured as follows to ensure 
   - `on_closing()`: Ensures proper shutdown of the application, including releasing hardware resources and saving data.
 
 
-### Directory Structure
-
-The project is organized into the following directory structure for clarity and ease of access:
-Robot_Fish_Tracking/
-│//
-├── robotic_fish_tracking.py - Main application script.
-│//
-├── README.md                 - Project documentation and setup instructions.
-│//
-└── requirements.txt          - List of Python package dependencies.
-
 
 This structure is designed to keep the application straightforward and focused, with potential for further expansion as needed (e.g., adding modules for different tracking algorithms or supporting additional robotic models).
 
->>>>>>> 420a2aeca3c201790db2a87426bfbbf558db2615
 ## Expanding the Codebase
 
 To add new features or modify existing functionality:
