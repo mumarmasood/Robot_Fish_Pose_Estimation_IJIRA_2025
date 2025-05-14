@@ -111,7 +111,7 @@ class Fish:
         # 
         self.delta = _del
 
-        self.delta_hist.append(self.delta)
+        # self.delta_hist.append(self.delta)
 
         # A_1 and A_2 are the amplitudes (in rad) of the oscillations of the caudal fin
         A_1 = 10*np.pi/180
